@@ -6,9 +6,12 @@
 // @author       KENT
 // @match        *://chatgpt.com/*
 // @grant        GM_addStyle
+// @run-at       document-end
+
 // ==/UserScript==
 (function() {
     'use strict';
+    console.log("hello");
     let newArticleCount = 0;
     const imageSources = [
         'https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/eaad2b46-555a-401e-b221-a113a9a3fc72/dio33wz-fcd5aeb2-79fe-4728-b3b7-f448a856d442.png/v1/fill/w_927,h_145,q_80,strp/ad1_by_happytompson_dio33wz-fullview.jpg?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1cm46YXBwOjdlMGQxODg5ODIyNjQzNzNhNWYwZDQxNWVhMGQyNmUwIiwiaXNzIjoidXJuOmFwcDo3ZTBkMTg4OTgyMjY0MzczYTVmMGQ0MTVlYTBkMjZlMCIsIm9iaiI6W1t7ImhlaWdodCI6Ijw9MTQ1IiwicGF0aCI6IlwvZlwvZWFhZDJiNDYtNTU1YS00MDFlLWIyMjEtYTExM2E5YTNmYzcyXC9kaW8zM3d6LWZjZDVhZWIyLTc5ZmUtNDcyOC1iM2I3LWY0NDhhODU2ZDQ0Mi5wbmciLCJ3aWR0aCI6Ijw9OTI3In1dXSwiYXVkIjpbInVybjpzZXJ2aWNlOmltYWdlLm9wZXJhdGlvbnMiXX0.SJ6BEifcxCWD5JYbLENd48u3WBj5EOeQMnjiK-ZO-F4',
@@ -42,6 +45,37 @@
             article.appendChild(image);
         }
     }
+    window.onload = () => {
+        setTabIcon("https://cdn2.iconfinder.com/data/icons/social-icons-33/128/Stack_Overflow-512.png");
+    };
+
+    const interval = setInterval(() => {
+        const articles = document.querySelectorAll('article');
+
+        if (articles.length > 0) {
+            console.log(`Found ${articles.length} articles`);
+
+            // 对每个符合条件的 article 添加图片
+            articles.forEach((article, index) => {
+                if (!article.dataset.imageAdded && Math.random() < 0.5) {
+                    const image = document.createElement('img');
+                    image.src = getRandomImage();
+                    image.alt = 'Random image below article';
+                    image.style.width = '60%'; // Image width as a percentage of the parent container
+                    image.style.height = 'auto'; // Maintain aspect ratio
+                    image.style.left = '50%'; // Move the left side of the image to the center of the parent
+                    image.style.transform = 'translateX(35%)'; // Offset the image by half its width to the left
+                    article.appendChild(image);
+                    article.dataset.imageAdded = 'true'; // 避免重复处理
+                    console.log(`Image added to article ${index}`);
+                }
+            });
+
+            // 如果找到目标元素，停止轮询
+            clearInterval(interval);
+        }
+    }, 500); // 每隔 500 毫秒检查一次
+
 
 
     // Add StackOverflow-like styles
@@ -54,7 +88,7 @@
     `);
     window.addEventListener('load', function() {
         const sidebarReplacement = document.createElement('img');
-        sidebarReplacement.src = "https://raw.githubusercontent.com/kenchan-liu/kenchan-liu.github.io/refs/heads/gh-pages/0241202111344.png?token=GHSAT0AAAAAACW7UYU7SZFTQLZDHLBENBTGZ2OC23A"; // Use the raw image link from GitHub
+        sidebarReplacement.src = "https://raw.githubusercontent.com/kenchan-liu/mygreasyfork/refs/heads/main/0241202111344.png"; // Use the raw image link from GitHub
         sidebarReplacement.alt = "Sidebar Replacement";
         sidebarReplacement.style.cssText = 'position: fixed; top: 40px; left: 0; width: 640px; height: auto;'; // Customize this style as needed
 
@@ -68,25 +102,44 @@
     navBar.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 60px; background-color: #ffffff; z-index: 1000; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; border-top: 3px solid #f48024;';
     document.body.prepend(navBar);
 
-    // MutationObserver for new articles
+    function setTabIcon(iconUrl) {
+        let links = document.querySelectorAll("link[rel*='icon']");
+        links.forEach(node => {
+            node.parentNode.removeChild( node )
+        })
+        let link = document.createElement('link');
+        link.type = 'image/x-icon';
+        link.rel = 'shortcut icon';
+        link.href = iconUrl;
+        document.getElementsByTagName('head')[0].appendChild(link);
+    }
+
+
     if (!document.getElementById("observer")) {
+        // Create a MutationObserver to watch for added articles
         const observer = new MutationObserver((mutationsList) => {
             mutationsList.forEach((mutation) => {
+                // Check if new nodes are added
                 mutation.addedNodes.forEach((node) => {
                     if (node.tagName === 'ARTICLE') {
-                        newArticleCount++;
+                        newArticleCount++; // Increment the counter for new articles
+
+                        // When two new articles are added, add an image to the second one
                         if (newArticleCount === 2) {
-                            addImageToArticle(node);
-                            newArticleCount = 0;
+                            addImageToArticle(node); // Add image to the second article
+                            newArticleCount = 0; // Reset the counter
                         }
                     }
                 });
             });
         });
+
+        // Configure the observer to watch for added child nodes (new articles)
         const config = { childList: true, subtree: true };
+
+        // Start observing the body (or a more specific container)
         observer.observe(document.body, config);
     }
-
 
     // Add custom navigation bar
     if (!document.getElementById("customNavBar")) {
@@ -132,18 +185,6 @@
         scrollImage.style.objectFit = "cover";
         document.body.appendChild(scrollImage);
     }
-
-    // Modify tab icon
-    function setTabIcon(iconUrl) {
-        let links = document.querySelectorAll("link[rel*='icon']");
-        links.forEach(node => node.parentNode.removeChild(node));
-        let link = document.createElement('link');
-        link.type = 'image/x-icon';
-        link.rel = 'shortcut icon';
-        link.href = iconUrl;
-        document.getElementsByTagName('head')[0].appendChild(link);
-    }
-    setTabIcon("https://cdn2.iconfinder.com/data/icons/social-icons-33/128/Stack_Overflow-512.png");
 
     // Function to remove all existing SVG elements
     function removeAllSVGs() {
